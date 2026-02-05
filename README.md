@@ -4,13 +4,13 @@ Hệ thống Calendar API với authentication, JWT tokens, và conflict detecti
 
 ## Tính năng
 
-- ✅ Đăng ký & đăng nhập người dùng
-- ✅ JWT Access Token (30 phút) + Refresh Token (7 ngày)
-- ✅ Quản lý nhiều calendars
-- ✅ CRUD events với conflict detection
-- ✅ Query events theo thời gian
-- ✅ Soft delete (cancel) events
-- ✅ Database indexes để tối ưu performance
+- Đăng ký & đăng nhập người dùng
+- JWT Access Token (30 phút) + Refresh Token (7 ngày)
+- Quản lý nhiều calendars
+- CRUD events với conflict detection
+- Query events theo thời gian
+- Soft delete (cancel) events
+- Database indexes để tối ưu performance
 
 ## Công nghệ
 
@@ -234,17 +234,6 @@ curl -X POST "http://localhost:8000/events?check_conflicts=false" ...
 ## Testing
 
 Sử dụng Swagger UI tại `http://localhost:8000/docs` để test API interactively.
-
-## Production Checklist
-
-- [ ] Đổi `SECRET_KEY` trong `.env`
-- [ ] Sử dụng PostgreSQL thay vì SQLite
-- [ ] Cấu hình CORS cho domain cụ thể
-- [ ] Enable HTTPS
-- [ ] Setup Alembic migrations
-- [ ] Add rate limiting
-- [ ] Setup logging
-- [ ] Add monitoring
 
 ## Troubleshooting
 
