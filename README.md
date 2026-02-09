@@ -248,3 +248,26 @@ Sử dụng Swagger UI tại `http://localhost:8000/docs` để test API interac
 **Lỗi 409 Conflict:**
 - Event bị trùng thời gian với event khác
 - Kiểm tra lại start_at và end_at
+
+## Docker
+
+### 1. Tao file `.env`
+
+```bash
+cp .env.example .env
+```
+
+### 2. Chay API + PostgreSQL bang Docker Compose
+
+```bash
+docker compose up --build
+```
+
+API: `http://localhost:8000`  
+Docs: `http://localhost:8000/docs`
+
+### 3. Dung container
+
+```bash
+docker compose down
+```
