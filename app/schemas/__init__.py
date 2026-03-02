@@ -1,3 +1,3 @@
-from app.schemas import auth, calendar, event
+from app.schemas import auth, event
 
-__all__ = ["auth", "calendar", "event"]
+__all__ = ["auth", "event"]

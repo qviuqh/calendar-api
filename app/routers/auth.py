@@ -1,22 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 
 from app.database import get_db
-from app.models import User, RefreshToken
+from app.models import User
 from app.schemas.auth import (
-    UserRegister, UserLogin, Token, TokenRefresh, 
-    TokenRevoke, UserResponse
+    UserRegister, UserLogin, Token, UserResponse
 )
 from app.utils.security import (
     hash_password, verify_password, 
-    generate_refresh_token, hash_token
+    generate_access_token, hash_token
 )
-from app.utils.auth import create_access_token, get_current_user
-from app.config import get_settings
+from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-settings = get_settings()
+
+
+def issue_user_access_token(user: User, db: Session) -> str:
+    """Generate and persist the single active access token for a user."""
+    access_token = generate_access_token()
+    user.access_token_hash = hash_token(access_token)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return access_token
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -44,11 +50,10 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(
-    credentials: UserLogin, 
-    request: Request,
+    credentials: UserLogin,
     db: Session = Depends(get_db)
 ):
-    """Login and receive access + refresh tokens"""
+    """Login and receive the user's long-lived access token"""
     # Verify user
     user = db.query(User).filter(User.email == credentials.email).first()
     if not user or not verify_password(credentials.password, user.password_hash):
@@ -57,76 +62,36 @@ def login(
             detail="Incorrect email or password"
         )
     
-    # Create access token
-    access_token = create_access_token(data={"sub": str(user.id)})
-    
-    # Create refresh token
-    refresh_token_value = generate_refresh_token()
-    refresh_token_expires = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    
-    refresh_token = RefreshToken(
-        user_id=user.id,
-        token_hash=hash_token(refresh_token_value),
-        expires_at=refresh_token_expires,
-        user_agent=request.headers.get("user-agent"),
-        ip_address=request.client.host if request.client else None
-    )
-    db.add(refresh_token)
-    db.commit()
+    access_token = issue_user_access_token(user, db)
     
     return {
         "access_token": access_token,
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "refresh_token": refresh_token_value,
         "token_type": "bearer"
     }
 
 
-@router.post("/refresh", response_model=Token)
-def refresh(token_data: TokenRefresh, db: Session = Depends(get_db)):
-    """Refresh access token using refresh token"""
-    token_hash = hash_token(token_data.refresh_token)
-    
-    # Find refresh token
-    refresh_token = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash,
-        RefreshToken.revoked_at.is_(None),
-        RefreshToken.expires_at > datetime.utcnow()
-    ).first()
-    
-    if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token"
-        )
-    
-    # Create new access token
-    access_token = create_access_token(data={"sub": str(refresh_token.user_id)})
-    
-    # Optional: Rotate refresh token
-    # For this demo, we'll reuse the same refresh token
-    
+@router.post("/rotate-token", response_model=Token)
+def rotate_access_token(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Replace the current user's access token with a new one."""
+    access_token = issue_user_access_token(current_user, db)
     return {
         "access_token": access_token,
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "refresh_token": token_data.refresh_token,
         "token_type": "bearer"
     }
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(token_data: TokenRevoke, db: Session = Depends(get_db)):
-    """Revoke a refresh token (logout)"""
-    token_hash = hash_token(token_data.refresh_token)
-    
-    refresh_token = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash
-    ).first()
-    
-    if refresh_token:
-        refresh_token.revoked_at = datetime.utcnow()
-        db.commit()
-    
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Invalidate the current access token (logout)."""
+    current_user.access_token_hash = None
+    db.add(current_user)
+    db.commit()
     return None
 
 

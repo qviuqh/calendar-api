@@ -20,9 +20,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     # return pwd_context.verify(plain_password, hashed_password)
 
 
-def generate_refresh_token() -> str:
-    """Generate a random refresh token"""
-    return secrets.token_urlsafe(32)
+def generate_access_token() -> str:
+    """Generate a long-lived opaque access token"""
+    return secrets.token_urlsafe(48)
 
 
 def hash_token(token: str) -> str:

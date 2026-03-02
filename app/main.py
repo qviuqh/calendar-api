@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import auth, calendars, events
+from app.routers import auth, events
 
 settings = get_settings()
 
@@ -28,7 +28,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router)
-app.include_router(calendars.router)
 app.include_router(events.router)
 
 
