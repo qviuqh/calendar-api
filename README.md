@@ -201,8 +201,6 @@ curl -X POST http://localhost:8000/auth/logout \
 * `status` (String - "confirmed" / "cancelled")
 * `created_at`, `updated_at` (DateTime)
 
-*(Các bảng `calendars` và `refresh_tokens` đã bị gỡ bỏ để tối giản và tăng tính bảo mật cho dự án)*
-
 ---
 
 ## Conflict Detection
